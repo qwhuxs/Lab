@@ -8,20 +8,30 @@ app.secret_key = 'your_secret_key'
 ALBUMS_FILE = 'albums.json'
 USERS_FILE = 'users.json'
 
+# Клас для роботи з JSON даними
+class JSONManager:
+    @staticmethod
+    def load_data(file_path, default_data):
+        try:
+            with open(file_path, 'r') as file:
+                return json.load(file)
+        except FileNotFoundError:
+            return default_data
+
+    @staticmethod
+    def save_data(file_path, data):
+        with open(file_path, 'w') as file:
+            json.dump(data, file, indent=4)
+
 # Клас для роботи з альбомами
 class AlbumManager:
     @staticmethod
     def load_albums():
-        try:
-            with open(ALBUMS_FILE, 'r') as file:
-                return json.load(file)
-        except FileNotFoundError:
-            return []
+        return JSONManager.load_data(ALBUMS_FILE, [])
 
     @staticmethod
     def save_albums(albums):
-        with open(ALBUMS_FILE, 'w') as file:
-            json.dump(albums, file, indent=4)
+        JSONManager.save_data(ALBUMS_FILE, albums)
 
     @staticmethod
     def get_album_by_id(album_id):
@@ -50,22 +60,17 @@ class AlbumManager:
 class UserManager:
     @staticmethod
     def load_users():
-        try:
-            with open(USERS_FILE, 'r') as file:
-                return json.load(file)
-        except FileNotFoundError:
-            return {"admin": {"password": "admin123", "role": "admin"}}
+        return JSONManager.load_data(USERS_FILE, {"admin": {"password": "admin123", "role": "admin"}})
 
     @staticmethod
     def save_users(users):
-        with open(USERS_FILE, 'w') as file:
-            json.dump(users, file, indent=4)
+        JSONManager.save_data(USERS_FILE, users)
 
     @staticmethod
     def register_user(username, password):
         users = UserManager.load_users()
         if username in users:
-            return False
+            return False  
         users[username] = {"password": password, "role": "user"}
         UserManager.save_users(users)
         return True
@@ -80,18 +85,22 @@ class UserManager:
 def index():
     return render_template('index.html')
 
+
 @app.route('/about')
 def about():
     return render_template('about.html')
+
 
 @app.route('/history')
 def history():
     return render_template('history.html')
 
+
 @app.route('/albums')
 def albums():
     albums = AlbumManager.load_albums()
     return render_template('album.html', albums=albums)
+
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -105,6 +114,7 @@ def register():
             flash('Користувач вже існує!')
             return redirect(url_for('register'))
     return render_template('register.html')
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -120,11 +130,13 @@ def login():
             return redirect(url_for('login'))
     return render_template('login.html')
 
+
 @app.route('/logout')
 def logout():
     session.pop('username', None)
     flash('Ви вийшли з акаунту!')
     return redirect(url_for('index'))
+
 
 @app.route('/edit_album/<int:album_id>', methods=['GET', 'POST'])
 def edit_album(album_id):
@@ -144,6 +156,7 @@ def edit_album(album_id):
 
     return render_template('edit_album.html', album=album)
 
+
 @app.route('/add_album', methods=['GET', 'POST'])
 def add_album():
     if request.method == 'POST':
@@ -155,11 +168,13 @@ def add_album():
         return redirect(url_for('albums'))
     return render_template('add_album.html')
 
+
 @app.route('/delete_album/<int:album_id>', methods=['POST'])
 def delete_album(album_id):
     AlbumManager.delete_album(album_id)
     flash('Альбом видалено!')
     return redirect(url_for('albums'))
+
 
 if __name__ == '__main__':
     app.run(debug=True, port=5001)
