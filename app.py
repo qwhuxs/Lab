@@ -1,9 +1,10 @@
 import json
 import re
+import os
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'
+app.secret_key = os.getenv('SECRET_KEY', 'default_secret_key')  
 
 # Файли для зберігання даних
 ALBUMS_FILE = 'albums.json'
@@ -83,10 +84,10 @@ class UserManager:
 
 # Валідація введених даних
 def is_valid_username(username):
-    return bool(re.match(r'^[a-zA-Z0-9_]{3,20}$', username))
+    return bool(re.match(r'^[a-zA-Z0-9_]{3,20}$', username))  
 
 def is_valid_password(password):
-    return len(password) >= 6
+    return len(password) >= 6  
 
 # Рендеримо головну сторінку
 @app.route('/')
@@ -100,17 +101,16 @@ def register():
         password = request.form['password']
         
         if not is_valid_username(username) or not is_valid_password(password):
-            flash('Некоректні дані!')
+            flash('Некоректні дані! Будь ласка, введіть правильні дані для користувача і пароля.', 'error')
             return redirect(url_for('register'))
         
         if UserManager.register_user(username, password):
-            flash('Реєстрація успішна!')
+            flash('Реєстрація успішна! Ласкаво просимо до нашого сервісу!', 'success')
             return redirect(url_for('login'))
         else:
-            flash('Користувач вже існує!')
+            flash('Користувач вже існує! Спробуйте інше ім’я.', 'error')
             return redirect(url_for('register'))
     return render_template('register.html')
-
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -119,20 +119,18 @@ def login():
         password = request.form['password']
         if UserManager.authenticate_user(username, password):
             session['username'] = username
-            flash('Вхід успішний!')
+            flash('Вхід успішний! Ласкаво просимо!', 'success')
             return redirect(url_for('index'))
         else:
-            flash('Невірний логін або пароль!')
+            flash('Невірний логін або пароль! Будь ласка, спробуйте знову.', 'error')
             return redirect(url_for('login'))
     return render_template('login.html')
-
 
 @app.route('/logout')
 def logout():
     session.pop('username', None)
-    flash('Ви вийшли з акаунту!')
+    flash('Ви вийшли з акаунту! До зустрічі!', 'success')
     return redirect(url_for('index'))
-
 
 @app.route('/edit_album/<int:album_id>', methods=['GET', 'POST'])
 def edit_album(album_id):
@@ -140,19 +138,18 @@ def edit_album(album_id):
     album = next((a for a in albums if a['id'] == album_id), None)
     
     if album is None:
-        flash('Альбом не знайдено!')
+        flash('Альбом не знайдено! Перевірте введені дані.', 'error')
         return redirect(url_for('albums'))
 
     if request.method == 'POST':
         album['title'] = request.form['title']
         album['description'] = request.form['description']
         album['release_date'] = request.form['release_date']
-        AlbumManager.save_albums(albums)  # Оновлені дані тепер збережені
-        flash('Альбом оновлено!')
+        AlbumManager.save_albums(albums)  
+        flash('Альбом оновлено! Зміни збережено.', 'success')
         return redirect(url_for('albums'))
     
     return render_template('edit_album.html', album=album)
-
 
 @app.route('/add_album', methods=['GET', 'POST'])
 def add_album():
@@ -161,17 +158,15 @@ def add_album():
         description = request.form['description']
         release_date = request.form['release_date']
         AlbumManager.add_album(title, description, release_date)
-        flash('Альбом додано!')
+        flash('Альбом додано! Він буде доступний для всіх користувачів.', 'success')
         return redirect(url_for('albums'))
     return render_template('add_album.html')
-
 
 @app.route('/delete_album/<int:album_id>', methods=['POST'])
 def delete_album(album_id):
     AlbumManager.delete_album(album_id)
-    flash('Альбом видалено!')
+    flash('Альбом видалено! Зміни застосовано.', 'success')
     return redirect(url_for('albums'))
-
 
 if __name__ == '__main__':
     app.run(debug=True, port=5001)
