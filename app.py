@@ -1,6 +1,7 @@
 import json
 import re
 import os
+import logging
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 
 app = Flask(__name__)
@@ -10,6 +11,9 @@ app.secret_key = os.getenv('SECRET_KEY', 'default_secret_key')
 ALBUMS_FILE = 'albums.json'
 USERS_FILE = 'users.json'
 
+# Налаштування логування
+logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
+
 # Клас для роботи з JSON даними
 class JSONManager:
     @staticmethod
@@ -18,12 +22,23 @@ class JSONManager:
             with open(file_path, 'r') as file:
                 return json.load(file)
         except FileNotFoundError:
+            logging.error(f"Файл не знайдено: {file_path}. Використано значення за замовчуванням.")
+            return default_data
+        except json.JSONDecodeError:
+            logging.error(f"Помилка декодування JSON у файлі: {file_path}. Використано значення за замовчуванням.")
+            return default_data
+        except Exception as e:
+            logging.error(f"Невідома помилка при читанні файлу {file_path}: {e}")
             return default_data
 
     @staticmethod
     def save_data(file_path, data):
-        with open(file_path, 'w') as file:
-            json.dump(data, file, indent=4)
+        try:
+            with open(file_path, 'w') as file:
+                json.dump(data, file, indent=4)
+        except Exception as e:
+            logging.error(f"Помилка запису в файл {file_path}: {e}")
+            flash('Помилка збереження даних. Спробуйте ще раз.', 'error')
 
 # Клас для роботи з альбомами
 class AlbumManager:
