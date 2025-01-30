@@ -8,6 +8,7 @@ app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'default_secret_key')  
 
 USERS_FILE = 'users.json'
+ALBUMS_FILE = 'albums.json'
 
 logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -57,6 +58,25 @@ class UserManager:
         users = UserManager.load_users()
         return username in users and users[username]['password'] == password
 
+class AlbumManager:
+    @staticmethod
+    def load_albums():
+        return JSONManager.load_data(ALBUMS_FILE, [])
+
+    @staticmethod
+    def save_albums(albums):
+        JSONManager.save_data(ALBUMS_FILE, albums)
+
+    @staticmethod
+    def update_album(album_id, data):
+        albums = AlbumManager.load_albums()
+        for album in albums:
+            if album['id'] == album_id:
+                album.update(data)
+                AlbumManager.save_albums(albums)
+                return True
+        return False
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -70,6 +90,15 @@ def register():
             flash('Користувач вже існує!', 'error')
             return redirect(url_for('register'))
     return render_template('register.html')
+
+@app.route('/edit_album/<int:album_id>', methods=['POST'])
+def edit_album(album_id):
+    data = request.form.to_dict()
+    if AlbumManager.update_album(album_id, data):
+        flash('Альбом оновлено!', 'success')
+    else:
+        flash('Альбом не знайдено!', 'error')
+    return redirect(url_for('albums'))
 
 if __name__ == '__main__':
     app.run(debug=True, port=5001)
